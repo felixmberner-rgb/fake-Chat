@@ -59,6 +59,7 @@
             z-index: 10;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             box-sizing: border-box;
+            width: 100%;
         }
 
         .chat-container {
@@ -123,20 +124,20 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Etwas größerer Abstand nach oben */
             margin: 18px 0 0 0; 
             width: 100%;
             animation: popIn 0.3s forwards;
             transition: opacity 0.4s ease;
         }
         .unread-banner {
-            background-color: #ffffff;
-            color: #ea0038; /* Rote Original-Schrift */
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(4px);
+            color: #ea0038;
             font-size: calc(var(--chat-font-size) * 0.85);
             font-weight: 500;
-            padding: 5px 14px;
+            padding: 4px 14px;
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             text-align: center;
         }
 
@@ -234,7 +235,7 @@
             border: 1px solid #1da851;
         }
         #floatingPauseBtn.is-paused {
-            background-color: #f97316; /* Orange indicating paused state */
+            background-color: #f97316;
             border-color: #ea580c;
             animation: pulse-orange 2s infinite;
         }
@@ -244,7 +245,6 @@
             100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
         }
 
-        /* Hide FABs on mobile */
         @media (max-width: 850px) {
             .fab-button { display: none !important; }
         }
@@ -261,24 +261,35 @@
     <div class="chat-app" id="captureArea">
         <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
 
-        <!-- Scalable Header -->
+        <!-- STABILES Scalable Header (No Jumping!) -->
         <div class="header">
-            <svg viewBox="0 0 24 24" width="calc(20px + var(--chat-font-size)*0.6)" height="calc(20px + var(--chat-font-size)*0.6)" fill="currentColor" class="mr-1 cursor-pointer hover:bg-[#016d5a] rounded-full p-0.5 transition-colors" style="margin-left: -2px;" onclick="returnToEditor()" title="Zurück zum Editor">
+            <!-- Back Arrow (shrink-0 prevents it from shrinking) -->
+            <svg viewBox="0 0 24 24" fill="currentColor" class="mr-1 shrink-0 cursor-pointer hover:bg-[#016d5a] rounded-full p-0.5 transition-colors" style="width: calc(20px + var(--chat-font-size)*0.6); height: calc(20px + var(--chat-font-size)*0.6); margin-left: -2px;" onclick="returnToEditor()" title="Zurück zum Editor">
                 <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
             </svg>
+            
+            <!-- Logo (shrink-0 prevents it from shrinking) -->
             <div class="bg-white rounded-full flex items-center justify-center overflow-hidden mr-3 shrink-0" style="width: calc(26px + var(--chat-font-size)*0.9); height: calc(26px + var(--chat-font-size)*0.9);">
                 <img id="chatHeaderLogo" src="https://ui-avatars.com/api/?name=Projektgruppe&background=e0f2f1&color=008069&size=128" alt="Group Logo" class="w-full h-full object-cover">
             </div>
-            <div class="flex flex-col flex-grow min-w-0 pr-2">
-                <div id="chatHeaderTitle" class="font-semibold leading-tight truncate" style="font-size: calc(var(--chat-font-size) * 1.15);">Projektgruppe</div>
-                <div id="groupMembersList" class="text-[#b4e3db] truncate mt-0.5 leading-tight" style="font-size: calc(var(--chat-font-size) * 0.85);"></div>
-                <div id="typingStatus" class="text-[#b4e3db] truncate mt-0.5 leading-tight hidden" style="font-size: calc(var(--chat-font-size) * 0.85);">
-                    <span id="typingName">Jemand</span> schreibt<span class="typing-dots"></span>
+            
+            <!-- Text Container (flex-1 and min-w-0 force texts to truncate strictly within space) -->
+            <div class="flex flex-col flex-1 min-w-0 pr-2 overflow-hidden">
+                <div id="chatHeaderTitle" class="font-semibold leading-tight truncate w-full" style="font-size: calc(var(--chat-font-size) * 1.15);">Projektgruppe</div>
+                
+                <!-- Subtitle Container (Fixed height & relative to prevent vertical jumping) -->
+                <div class="relative w-full mt-0.5" style="height: 1.2em; font-size: calc(var(--chat-font-size) * 0.85);">
+                    <div id="groupMembersList" class="absolute inset-0 text-[#b4e3db] truncate leading-tight w-full"></div>
+                    <div id="typingStatus" class="absolute inset-0 text-[#b4e3db] truncate leading-tight hidden w-full">
+                        <span id="typingName">Jemand</span> schreibt<span class="typing-dots"></span>
+                    </div>
                 </div>
             </div>
+            
+            <!-- Right Icons (shrink-0 prevents them from shrinking) -->
             <div class="flex space-x-4 ml-1 shrink-0 items-center">
-                <svg viewBox="0 0 24 24" width="calc(14px + var(--chat-font-size)*0.5)" height="calc(14px + var(--chat-font-size)*0.5)" fill="currentColor"><path d="M15.9 14.3H15l-.3-.3c1-1.1 1.6-2.7 1.6-4.3 0-3.7-3-6.7-6.7-6.7S3 6 3 9.7s3 6.7 6.7 6.7c1.6 0 3.2-.6 4.3-1.6l.3.3v.8l5.1 5.1 1.5-1.5-5-5.2zm-6.2 0c-2.6 0-4.6-2.1-4.6-4.6s2.1-4.6 4.6-4.6 4.6 2.1 4.6 4.6-2 4.6-4.6 4.6z"/></svg>
-                <svg viewBox="0 0 24 24" width="calc(14px + var(--chat-font-size)*0.5)" height="calc(14px + var(--chat-font-size)*0.5)" fill="currentColor"><path d="M12 7a2 2 0 1 0-.001-4.001A2 2 0 0 0 12 7zm0 2a2 2 0 1 0-.001 3.999A2 2 0 0 0 12 9zm0 6a2 2 0 1 0-.001 3.999A2 2 0 0 0 12 15z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor" class="shrink-0" style="width: calc(14px + var(--chat-font-size)*0.5); height: calc(14px + var(--chat-font-size)*0.5);"><path d="M15.9 14.3H15l-.3-.3c1-1.1 1.6-2.7 1.6-4.3 0-3.7-3-6.7-6.7-6.7S3 6 3 9.7s3 6.7 6.7 6.7c1.6 0 3.2-.6 4.3-1.6l.3.3v.8l5.1 5.1 1.5-1.5-5-5.2zm-6.2 0c-2.6 0-4.6-2.1-4.6-4.6s2.1-4.6 4.6-4.6 4.6 2.1 4.6 4.6-2 4.6-4.6 4.6z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor" class="shrink-0" style="width: calc(14px + var(--chat-font-size)*0.5); height: calc(14px + var(--chat-font-size)*0.5);"><path d="M12 7a2 2 0 1 0-.001-4.001A2 2 0 0 0 12 7zm0 2a2 2 0 1 0-.001 3.999A2 2 0 0 0 12 9zm0 6a2 2 0 1 0-.001 3.999A2 2 0 0 0 12 15z"/></svg>
             </div>
         </div>
 
@@ -336,7 +347,8 @@
     <div class="overlay-content">
         
         <div class="p-6 border-b border-gray-100 bg-white shrink-0 flex flex-col md:flex-row gap-5 items-center justify-between">
-            <div class="flex items-center gap-5 w-full">
+            <!-- Stabilized Editor Header -->
+            <div class="flex items-center gap-5 w-full min-w-0">
                 <div class="relative w-16 h-16 rounded-full bg-gray-100 overflow-hidden cursor-pointer shadow-sm border border-gray-200 group shrink-0" onclick="document.getElementById('logoUpload').click()" title="Gruppenbild ändern">
                     <img id="editorLogoPreview" src="https://ui-avatars.com/api/?name=Projektgruppe&background=e0f2f1&color=008069&size=128" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -345,9 +357,9 @@
                 </div>
                 <input type="file" id="logoUpload" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
                 
-                <div class="flex-grow">
+                <div class="flex-grow min-w-0">
                     <label class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Gruppen-Name</label>
-                    <input type="text" id="groupNameInput" value="Projektgruppe" onchange="updateGroupDetails()" onkeyup="updateGroupDetails()" class="font-bold text-xl text-gray-800 border-b-2 border-transparent hover:border-gray-200 focus:border-[#008069] focus:outline-none transition-colors w-full pb-1 bg-transparent placeholder-gray-300" placeholder="z.B. Familie, Klasse 10b...">
+                    <input type="text" id="groupNameInput" value="Projektgruppe" onchange="updateGroupDetails()" onkeyup="updateGroupDetails()" class="font-bold text-xl text-gray-800 border-b-2 border-transparent hover:border-gray-200 focus:border-[#008069] focus:outline-none transition-colors w-full pb-1 bg-transparent placeholder-gray-300 truncate" placeholder="z.B. Familie, Klasse 10b...">
                 </div>
             </div>
         </div>
@@ -378,7 +390,6 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Simulations-Tempo:</label>
-                    <!-- Regler geht von 20 (Ultra Schnell) bis 120 (Langsam) -->
                     <input type="range" id="speedSlider" min="20" max="120" value="70" class="w-full accent-[#008069]" style="transform: scaleX(-1);">
                     <div class="flex justify-between text-xs text-gray-400 mt-1">
                         <span>Langsam</span>
@@ -470,7 +481,7 @@
     // Live Pause Logic
     let isLivePaused = false;
     let livePauseResolver = null;
-    let resumeInstant = false; // Trigger für sofortiges Fortsetzen
+    let resumeInstant = false; 
 
     function updateGroupDetails() {
         const nameInput = document.getElementById('groupNameInput').value;
@@ -681,7 +692,7 @@
     function formatTime(date) { return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); }
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // Erweiterte Sleep-Funktion, die auf den Instant-Resume (resumeInstant) reagiert
+    // Custom Sleep mit Check auf Pause / Instant Resume
     async function sleepAndCheckPause(ms) {
         let elapsed = 0;
         while (elapsed < ms) {
@@ -689,7 +700,7 @@
                 await new Promise(resolve => { livePauseResolver = resolve; });
             }
             if (resumeInstant) {
-                return; // Überspringt den Rest der Wartezeit sofort
+                return; // Beende den Sleep sofort
             }
             await sleep(50);
             elapsed += 50;
@@ -708,7 +719,6 @@
             document.getElementById('playIcon').classList.add('hidden');
             btn.classList.remove('is-paused');
             
-            // Wenn pausiert war, löst Play ein sofortiges Voranschreiten der nächsten Schritte aus
             resumeInstant = true; 
             if (livePauseResolver) {
                 livePauseResolver();
@@ -756,7 +766,6 @@
         document.getElementById("startOverlay").style.display = "none";
         document.getElementById("floatingEditBtn").style.display = "flex";
         
-        // Reset Pause State
         isLivePaused = false;
         livePauseResolver = null;
         resumeInstant = false;
@@ -764,18 +773,14 @@
         document.getElementById('playIcon').classList.add('hidden');
         document.getElementById('floatingPauseBtn').classList.remove('is-paused');
 
-        // Button logic
         if (selectedBreakpoints.length === 0) {
-            // Standard mode: Show Pause Button
             document.getElementById("floatingPauseBtn").style.display = "flex";
             document.getElementById("floatingNextBtn").style.display = "none";
         } else {
-            // Segment mode: Hide pause button, NextBtn will be handled in loop
             document.getElementById("floatingPauseBtn").style.display = "none";
             document.getElementById("floatingNextBtn").style.display = "none";
         }
         
-        // Reset Area
         const bubbles = chatArea.querySelectorAll('.message-row, .unread-banner-container');
         bubbles.forEach(b => b.remove());
         
@@ -826,24 +831,20 @@
             if (isStartOfNewSegment) {
                 document.getElementById("floatingNextBtn").style.display = "flex";
                 
-                // Warte auf Klick für den nächsten Abschnitt
                 await new Promise(r => resolveNextSegment = r);
                 if (simId !== currentSimulationId) return; 
                 
                 document.getElementById("floatingNextBtn").style.display = "none";
                 virtualClock.setMinutes(virtualClock.getMinutes() + Math.floor(Math.random() * 35) + 5);
 
-                // Entferne das vorherige Banner erst jetzt!
                 if (currentBanner) currentBanner.remove();
 
-                // Setze das neue Banner
                 const bannerContainer = document.createElement("div");
                 bannerContainer.className = "unread-banner-container";
                 bannerContainer.innerHTML = `<div class="unread-banner">Ungelesene Nachrichten</div>`;
                 chatArea.appendChild(bannerContainer);
                 currentBanner = bannerContainer;
                 
-                // Eine winzige optische Verzögerung
                 await sleepAndCheckPause(100);
             }
 
@@ -854,8 +855,6 @@
             let typingBase = isNewSender ? (1000 + Math.random() * 500) : (500 + Math.random() * 300);
             let speedFactor = msPerChar / 70; 
 
-            // Die Tipp-Anzeige wird für jede Nachricht gezeigt, außer es war ein manueller Segment-Start 
-            // ODER wir haben gerade den Live-Play-Button gedrückt (Instant Resume)
             if (!isStartOfNewSegment) {
                 if (!resumeInstant) {
                     typingName.innerText = msg.sender;
@@ -863,8 +862,7 @@
                     typingStatus.classList.remove('hidden');
 
                     let realTypingDelay = typingBase * speedFactor;
-                    // Sicherstellen, dass das Tippen bei "Turbo" nicht unsichtbar schnell wird
-                    let minDelay = isNewSender ? 800 : 400;
+                    let minDelay = isNewSender ? 800 : 400; // Tippen sichtbar lassen!
                     if (realTypingDelay < minDelay) realTypingDelay = minDelay;
 
                     await sleepAndCheckPause(realTypingDelay);
@@ -899,12 +897,12 @@
             chatArea.appendChild(msgElement);
             setTimeout(() => { chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' }); }, 30);
 
-            // Instant Resume Flag verbrauchen, damit die nun folgende Lese-Pause normal läuft
+            // Löscht das Instant-Resume Flag, damit nächste Message normal tickt
             resumeInstant = false;
 
-            // Die Lese-Pause, bevor die Person anfängt die NÄCHSTE Nachricht zu tippen
+            // Kürzere Lesepause, damit "Person X schreibt" früher anfangen kann
             let readingDelay = (readingBase * speedFactor) + (msg.text.length * msPerChar * 0.6);
-            if (readingDelay < 300) readingDelay = 300; // Keine unmittelbare Folge, minimale Pause
+            if (readingDelay < 300) readingDelay = 300;
             await sleepAndCheckPause(readingDelay);
             
             previousSender = msg.sender;
