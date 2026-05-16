@@ -123,20 +123,20 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: 16px 0;
+            /* Etwas größerer Abstand nach oben */
+            margin: 18px 0 0 0; 
             width: 100%;
             animation: popIn 0.3s forwards;
             transition: opacity 0.4s ease;
         }
         .unread-banner {
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(4px);
-            color: #ea0038;
+            background-color: #ffffff;
+            color: #ea0038; /* Rote Original-Schrift */
             font-size: calc(var(--chat-font-size) * 0.85);
             font-weight: 500;
-            padding: 4px 14px;
+            padding: 5px 14px;
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             text-align: center;
         }
 
@@ -286,7 +286,7 @@
         <div id="chatArea" class="chat-container">
             <div class="flex justify-center my-4" id="encryptionNotice">
                 <div class="bg-[#ffeecd] text-[#54656f] text-[11.5px] sm:text-[12.5px] py-2 px-3 rounded-xl shadow-sm text-center w-5/6 max-w-sm leading-snug">
-                    🔒 Nachrichten und Anrufe sind Ende-zu-Ende-verschlüsselt. Nur Personen in diesem Chat können sie lesen, anhören oder teilen. <strong>Mehr erfahren</strong>
+                    🔒 Nachrichten und Anrufe sind Ende-zu-Ende-verschlüsselt. Nur Personen in diesem Chat können sie lesen, anhören oder teilen. <strong class="cursor-pointer hover:underline">Mehr erfahren</strong>
                 </div>
             </div>
         </div>
@@ -470,6 +470,7 @@
     // Live Pause Logic
     let isLivePaused = false;
     let livePauseResolver = null;
+    let resumeInstant = false; // Trigger für sofortiges Fortsetzen
 
     function updateGroupDetails() {
         const nameInput = document.getElementById('groupNameInput').value;
@@ -680,15 +681,18 @@
     function formatTime(date) { return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); }
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // Custom Sleep that checks for pause to allow immediate halting
+    // Erweiterte Sleep-Funktion, die auf den Instant-Resume (resumeInstant) reagiert
     async function sleepAndCheckPause(ms) {
         let elapsed = 0;
         while (elapsed < ms) {
-            await sleep(50);
-            elapsed += 50;
             if (isLivePaused) {
                 await new Promise(resolve => { livePauseResolver = resolve; });
             }
+            if (resumeInstant) {
+                return; // Überspringt den Rest der Wartezeit sofort
+            }
+            await sleep(50);
+            elapsed += 50;
         }
     }
 
@@ -703,6 +707,9 @@
             document.getElementById('pauseIcon').classList.remove('hidden');
             document.getElementById('playIcon').classList.add('hidden');
             btn.classList.remove('is-paused');
+            
+            // Wenn pausiert war, löst Play ein sofortiges Voranschreiten der nächsten Schritte aus
+            resumeInstant = true; 
             if (livePauseResolver) {
                 livePauseResolver();
                 livePauseResolver = null;
@@ -752,6 +759,7 @@
         // Reset Pause State
         isLivePaused = false;
         livePauseResolver = null;
+        resumeInstant = false;
         document.getElementById('pauseIcon').classList.remove('hidden');
         document.getElementById('playIcon').classList.add('hidden');
         document.getElementById('floatingPauseBtn').classList.remove('is-paused');
@@ -808,62 +816,68 @@
     async function runSimulation(simId) {
         const msPerChar = parseInt(document.getElementById("speedSlider").value);
         let previousSender = null;
-        
         let currentBanner = null;
-        let messagesSinceBanner = 0;
 
         for (let i = 0; i < state.messagesData.length; i++) {
             if (simId !== currentSimulationId) return;
-            if (isLivePaused) await new Promise(resolve => { livePauseResolver = resolve; });
 
             const isStartOfNewSegment = (i > 0 && selectedBreakpoints.includes(i - 1));
             
             if (isStartOfNewSegment) {
                 document.getElementById("floatingNextBtn").style.display = "flex";
                 
+                // Warte auf Klick für den nächsten Abschnitt
                 await new Promise(r => resolveNextSegment = r);
                 if (simId !== currentSimulationId) return; 
                 
                 document.getElementById("floatingNextBtn").style.display = "none";
                 virtualClock.setMinutes(virtualClock.getMinutes() + Math.floor(Math.random() * 35) + 5);
 
-                // Entferne ein altes Banner sofort, falls es noch existiert
+                // Entferne das vorherige Banner erst jetzt!
                 if (currentBanner) currentBanner.remove();
 
+                // Setze das neue Banner
                 const bannerContainer = document.createElement("div");
                 bannerContainer.className = "unread-banner-container";
                 bannerContainer.innerHTML = `<div class="unread-banner">Ungelesene Nachrichten</div>`;
                 chatArea.appendChild(bannerContainer);
                 currentBanner = bannerContainer;
-                messagesSinceBanner = 0;
                 
-                await sleepAndCheckPause(300);
+                // Eine winzige optische Verzögerung
+                await sleepAndCheckPause(100);
             }
 
             const msg = state.messagesData[i];
             const isNewSender = msg.sender !== previousSender;
             
-            // Extreme Speed Scaling (20 is Turbo)
-            let readingBase = 500; 
-            let typingBase = isNewSender ? (400 + Math.random() * 200) : (150 + Math.random() * 150);
+            let readingBase = 200; 
+            let typingBase = isNewSender ? (1000 + Math.random() * 500) : (500 + Math.random() * 300);
             let speedFactor = msPerChar / 70; 
 
+            // Die Tipp-Anzeige wird für jede Nachricht gezeigt, außer es war ein manueller Segment-Start 
+            // ODER wir haben gerade den Live-Play-Button gedrückt (Instant Resume)
             if (!isStartOfNewSegment) {
-                typingName.innerText = msg.sender;
-                groupMembersList.classList.add('hidden');
-                typingStatus.classList.remove('hidden');
+                if (!resumeInstant) {
+                    typingName.innerText = msg.sender;
+                    groupMembersList.classList.add('hidden');
+                    typingStatus.classList.remove('hidden');
 
-                let realTypingDelay = typingBase * Math.pow(speedFactor, 1.5); // non-linear scaling for extreme turbo
-                await sleepAndCheckPause(realTypingDelay);
-                if (simId !== currentSimulationId) return;
+                    let realTypingDelay = typingBase * speedFactor;
+                    // Sicherstellen, dass das Tippen bei "Turbo" nicht unsichtbar schnell wird
+                    let minDelay = isNewSender ? 800 : 400;
+                    if (realTypingDelay < minDelay) realTypingDelay = minDelay;
 
-                typingStatus.classList.add('hidden');
-                groupMembersList.classList.remove('hidden');
+                    await sleepAndCheckPause(realTypingDelay);
+                    if (simId !== currentSimulationId) return;
 
-                if (previousSender !== null) {
-                    let virtualSecondsToAdd = isNewSender ? Math.floor(Math.random() * 45) + 15 : Math.floor(Math.random() * 8) + 2;
-                    virtualClock.setSeconds(virtualClock.getSeconds() + virtualSecondsToAdd);
+                    typingStatus.classList.add('hidden');
+                    groupMembersList.classList.remove('hidden');
                 }
+            }
+
+            if (previousSender !== null && !isStartOfNewSegment) {
+                let virtualSecondsToAdd = isNewSender ? Math.floor(Math.random() * 45) + 15 : Math.floor(Math.random() * 8) + 2;
+                virtualClock.setSeconds(virtualClock.getSeconds() + virtualSecondsToAdd);
             }
 
             const msgElement = document.createElement("div");
@@ -883,23 +897,14 @@
             `;
 
             chatArea.appendChild(msgElement);
-            
-            // Logic to remove unread banner
-            if (currentBanner) {
-                messagesSinceBanner++;
-                if (messagesSinceBanner >= 2) {
-                    let bannerToRemove = currentBanner; // Capture scope
-                    currentBanner = null; // Reset pointer immediately
-                    bannerToRemove.style.opacity = "0";
-                    setTimeout(() => {
-                        if (bannerToRemove.parentNode) bannerToRemove.parentNode.removeChild(bannerToRemove);
-                    }, 400); // 400ms fade transition
-                }
-            }
-
             setTimeout(() => { chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' }); }, 30);
 
-            let readingDelay = (readingBase * speedFactor) + (msg.text.length * msPerChar);
+            // Instant Resume Flag verbrauchen, damit die nun folgende Lese-Pause normal läuft
+            resumeInstant = false;
+
+            // Die Lese-Pause, bevor die Person anfängt die NÄCHSTE Nachricht zu tippen
+            let readingDelay = (readingBase * speedFactor) + (msg.text.length * msPerChar * 0.6);
+            if (readingDelay < 300) readingDelay = 300; // Keine unmittelbare Folge, minimale Pause
             await sleepAndCheckPause(readingDelay);
             
             previousSender = msg.sender;
